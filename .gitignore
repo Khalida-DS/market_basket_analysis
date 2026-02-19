@@ -1,0 +1,37 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment — never commit this
+venv/
+env/
+.env/
+.venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Data files — never push raw data to GitHub
+data/raw/
+data/processed/
+
+# Secrets — NEVER push these
+.env
+*.env
+
+# Generated outputs
+outputs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/

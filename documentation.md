@@ -290,3 +290,45 @@ feat/recommender-engine
 fix/item-frequency-bug
 refactor/vectorize-preprocessor
 docs/update-readme
+
+### Full Roadmap — What We Build Next
+
+```
+
+```
+
+
+### Link the local repository to tthe GitHub repostory
+
+#### 1️⃣ Go to your GitHub repo page
+Open your empty repository on GitHub and copy the HTTPS URL.
+It looks like:
+
+```
+https://github.com/Khalida-DS/REPO_NAME.git
+```
+#### 2️⃣ Set the remote origin
+In your terminal (inside your project folder), run:
+
+```
+git remote add origin https://github.com/Khalida-DS/REPO_NAME.git
+#replace the repo
+```
+#### 3️⃣ Verify remote is set
+
+```
+git remote -v
+
+```
+
+You should see:
+```
+origin  https://github.com/Khalida-DS/REPO_NAME.git (fetch)
+origin  https://github.com/Khalida-DS/REPO_NAME.git (push)
+```
+
+Push your commit
+```
+git branch -M main
+git push -u origin main
+```
