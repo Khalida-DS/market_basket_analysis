@@ -194,8 +194,10 @@ class Visualizer:
         fig = go.Figure()
 
         # Histogram
+        #fig.add_trace(go.Histogram(
+          #  x=bins,
         fig.add_trace(go.Histogram(
-            x=bins,
+            x=sizes,    
             name="Basket Sizes",
             marker_color=self.colors["primary"],
             opacity=0.8,
