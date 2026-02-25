@@ -2,24 +2,12 @@
 visualizer.py — Data Visualization
 =====================================
 
-WHY THIS FILE EXISTS:
----------------------
-The original notebook had scattered matplotlib calls
-with no consistent styling, no reusable functions,
-and no way to generate charts programmatically.
-
-This module centralizes all visualization logic:
-  - Consistent color palette (from config.py)
-  - Reusable chart functions
-  - Charts saved to outputs/figures/
-  - Clean interface for dashboard/app.py
-
-CHARTS PRODUCED:
-----------------
-1. plot_item_frequency()     → bar chart of popular items
-2. plot_basket_distribution() → histogram of basket sizes
-3. plot_rules_scatter()      → confidence vs lift scatter
-4. plot_network_graph()      → association rules network
+CHARTS — 4 business-relevant visualizations:
+----------------------------------------------
+1. plot_item_frequency()       → what sells most (inventory + promotions)
+2. plot_top_customers()        → who buys most (loyalty + retailer interviews)
+3. plot_rules_scatter()        → cross-sell rule quality (confidence vs lift)
+4. plot_cooccurrence_heatmap() → which items cluster (shelf placement + bundles)
 
 HOW TO USE:
 -----------
@@ -27,20 +15,16 @@ HOW TO USE:
 
     viz = Visualizer()
     fig = viz.plot_item_frequency(freq_df)
-    fig = viz.plot_basket_distribution(stats, baskets_df)
+    fig = viz.plot_top_customers(baskets_df)
     fig = viz.plot_rules_scatter(rules_df)
-    fig = viz.plot_network_graph(rules_df)
+    fig = viz.plot_cooccurrence_heatmap(rules_df)
 """
 
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import networkx as nx
-from pathlib import Path
 from loguru import logger
-from typing import Optional
 
 from src.config import (
     VIZ_PRIMARY_COLOR,
@@ -74,28 +58,21 @@ logger.add(
 
 class Visualizer:
     """
-    Creates all charts for the Market Basket Analysis project.
+    Creates business-relevant charts for Market Basket Analysis.
 
-    WHY A CLASS:
-    - Stores color palette and styling once
-    - All charts have consistent look and feel
-    - Easy to change theme in one place
-    - Clean interface for Streamlit dashboard
+    4 charts — each answers a specific business question:
+      1. What sells most?
+      2. Who are the top customers?
+      3. Which cross-sell rules are strongest?
+      4. Which items naturally cluster together?
 
     Usage:
         viz = Visualizer()
         fig = viz.plot_item_frequency(freq_df)
-        fig.show()   # opens in browser
+        fig.show()
     """
 
     def __init__(self, save_figures: bool = False):
-        """
-        Initialize Visualizer with styling configuration.
-
-        Args:
-            save_figures: If True, saves charts to
-                         outputs/figures/ as HTML files
-        """
         self.save_figures = save_figures
         self.colors = {
             "primary"   : VIZ_PRIMARY_COLOR,
@@ -113,7 +90,9 @@ class Visualizer:
         logger.info("Visualizer initialized")
 
     # -------------------------------------------------------
-    # PUBLIC METHODS
+    # CHART 1 — Item Frequency
+    # Business question: What sells most?
+    # Original notebook: px.bar df_1 x="name" y="item_frequency"
     # -------------------------------------------------------
 
     def plot_item_frequency(
@@ -123,7 +102,9 @@ class Visualizer:
         title: str = "Most Popular Item Categories",
     ) -> go.Figure:
         """
-        Bar chart of item frequency — most popular items.
+        Horizontal bar chart of item frequency.
+        Shows which categories appear in the most transactions.
+        Directly answers: what should we promote and stock more of?
 
         Args:
             freq_df: Output from Preprocessor.get_item_frequency()
@@ -135,7 +116,6 @@ class Visualizer:
         """
         logger.info(f"Plotting item frequency (top {top_n})...")
 
-        # Take top N items
         plot_df = freq_df.head(top_n).copy()
 
         fig = px.bar(
@@ -145,21 +125,22 @@ class Visualizer:
             orientation="h",
             color="percentage",
             color_continuous_scale=[
+                "#90cdf4",
                 self.colors["primary"],
-                self.colors["accent"],
+                "#1a365d",
             ],
             title=title,
             labels={
                 "frequency" : "Number of Transactions",
                 "name"      : "Item Category",
-                "percentage": "% of Total",
+                "percentage": "% of Total Sales",
             },
-            text="frequency",
+            text=plot_df["percentage"].apply(lambda x: f"{x:.1f}%"),
         )
 
         fig.update_traces(
-            texttemplate="%{text:,}",
             textposition="outside",
+            textfont=dict(size=11),
         )
 
         fig.update_layout(
@@ -172,67 +153,116 @@ class Visualizer:
         self._save_figure(fig, "item_frequency.html")
         return fig
 
-    def plot_basket_distribution(
+    # -------------------------------------------------------
+    # CHART 2 — Top Customers
+    # Business question: Who buys the most?
+    # Original notebook: px.bar df_total_10 x="customer_id_str"
+    # -------------------------------------------------------
+
+    def plot_top_customers(
         self,
         baskets_df: pd.DataFrame,
-        title: str = "Basket Size Distribution",
+        top_n: int = 20,
+        title: str = "Top Customers by Total Items Purchased",
     ) -> go.Figure:
         """
-        Histogram of basket sizes with statistics overlay.
+        Bar chart of top customers ranked by total items bought.
+
+        Directly from original notebook logic:
+            df_total = df.groupby('customer_id')['basket_size'].sum()
+
+        Business value:
+            - Retailer wants to interview top customers
+            - Identify loyalty program candidates
+            - Understand high-value customer behaviour
 
         Args:
             baskets_df: Output from DataLoader.load_baskets()
+            top_n:      Number of top customers to show
             title:      Chart title
 
         Returns:
             plotly Figure object
         """
-        logger.info("Plotting basket size distribution...")
+        logger.info(f"Plotting top {top_n} customers...")
 
-        sizes = baskets_df["basket_size"]
-
-        fig = go.Figure()
-
-        # Histogram
-        #fig.add_trace(go.Histogram(
-          #  x=bins,
-        fig.add_trace(go.Histogram(
-            x=sizes,    
-            name="Basket Sizes",
-            marker_color=self.colors["primary"],
-            opacity=0.8,
-            nbinsx=30,
-        ))
-
-        # Mean line
-        fig.add_vline(
-            x=sizes.mean(),
-            line_dash="dash",
-            line_color=self.colors["accent"],
-            annotation_text=f"Mean: {sizes.mean():.1f}",
-            annotation_position="top right",
+        df_total = (
+            baskets_df
+            .groupby("customer_id")["basket_size"]
+            .sum()
+            .reset_index()
+            .rename(columns={"basket_size": "total_items"})
+            .sort_values("total_items", ascending=False)
+            .head(top_n)
+            .reset_index(drop=True)
         )
 
-        # Median line
-        fig.add_vline(
-            x=sizes.median(),
-            line_dash="dot",
-            line_color=self.colors["secondary"],
-            annotation_text=f"Median: {sizes.median():.1f}",
-            annotation_position="top left",
+        total_all = df_total["total_items"].sum()
+        df_total["percentage"] = (
+            df_total["total_items"] / total_all * 100
+        ).round(3)
+
+        df_total["customer_id_str"] = (
+            "#" + df_total.index.astype(str).str.zfill(2)
+            + " — " + df_total["customer_id"].astype(str)
+        )
+        df_total["rank"] = df_total.index + 1
+
+        fig = px.bar(
+            df_total,
+            x="customer_id_str",
+            y="total_items",
+            color="total_items",
+            color_continuous_scale=[
+                "#90cdf4",
+                self.colors["primary"],
+                "#1a365d",
+            ],
+            title=title,
+            labels={
+                "customer_id_str": "Customer ID",
+                "total_items"    : "Total Items Purchased",
+            },
+            text=df_total["percentage"].apply(
+                lambda x: f"{x:.2f}%"
+            ),
+            hover_data={
+                "customer_id_str": True,
+                "total_items"    : True,
+                "percentage"     : ":.3f",
+                "rank"           : True,
+            },
+        )
+
+        fig.update_traces(
+            textposition="outside",
+            textfont=dict(size=10),
         )
 
         fig.update_layout(
             **self._base_layout(),
-            title=title,
-            xaxis_title="Number of Items in Basket",
-            yaxis_title="Number of Transactions",
+            xaxis=dict(
+                title="Customer ID",
+                tickangle=-45,
+                tickfont=dict(size=10),
+            ),
+            yaxis_title="Total Items Purchased",
+            coloraxis_showscale=False,
             showlegend=False,
         )
 
-        logger.info("  ✓ Basket distribution chart created")
-        self._save_figure(fig, "basket_distribution.html")
+        logger.info(
+            f"  ✓ Top customers chart created — "
+            f"top {top_n} of "
+            f"{baskets_df['customer_id'].nunique():,} customers"
+        )
+        self._save_figure(fig, "top_customers.html")
         return fig
+
+    # -------------------------------------------------------
+    # CHART 3 — Rules Scatter
+    # Business question: Which cross-sell rules are strongest?
+    # -------------------------------------------------------
 
     def plot_rules_scatter(
         self,
@@ -240,14 +270,16 @@ class Visualizer:
         title: str = "Association Rules — Confidence vs Lift",
     ) -> go.Figure:
         """
-        Scatter plot of association rules.
-        X axis: confidence
-        Y axis: lift
-        Color:  Zhang's metric
-        Size:   support
+        Scatter plot of all association rules.
+        X axis: confidence — how reliable is the rule?
+        Y axis: lift       — how much better than random?
+        Color:  Zhang's metric — is the association genuine?
+        Size:   support    — how common is this pattern?
 
-        This is the signature chart of the project.
-        Shows the quality of every rule at a glance.
+        Business value:
+            Rules in the top-right corner (high confidence + high lift)
+            are the best cross-sell opportunities.
+            Color (Zhang) confirms the association is real, not popularity bias.
 
         Args:
             rules_df: Output from Analyzer.run()
@@ -262,13 +294,13 @@ class Visualizer:
             logger.warning("  No rules to plot")
             return go.Figure()
 
-        # Convert frozensets to strings for display
         plot_df = rules_df.copy()
+
         plot_df["antecedents_str"] = plot_df["antecedents"].apply(
-            lambda x: ", ".join(sorted(x))
+            lambda x: ", ".join(sorted(str(i) for i in x))
         )
         plot_df["consequents_str"] = plot_df["consequents"].apply(
-            lambda x: ", ".join(sorted(x))
+            lambda x: ", ".join(sorted(str(i) for i in x))
         )
         plot_df["rule_str"] = (
             plot_df["antecedents_str"]
@@ -290,8 +322,9 @@ class Visualizer:
                 "support"      : ":.4f",
             },
             color_continuous_scale=[
+                "#90cdf4",
                 self.colors["primary"],
-                self.colors["accent"],
+                "#1a365d",
             ],
             title=title,
             labels={
@@ -302,155 +335,146 @@ class Visualizer:
             },
         )
 
-        # Add reference lines
         fig.add_hline(
             y=1.0,
             line_dash="dash",
             line_color="gray",
-            opacity=0.5,
+            opacity=0.4,
             annotation_text="Lift = 1.0 (random chance)",
-        )
-        fig.add_vline(
-            x=0.6,
-            line_dash="dash",
-            line_color="gray",
-            opacity=0.5,
-            annotation_text="Min confidence",
+            annotation_position="bottom right",
         )
 
         fig.update_layout(**self._base_layout())
 
         logger.info(
-            f"  ✓ Rules scatter chart created "
-            f"({len(rules_df)} rules)"
+            f"  ✓ Rules scatter chart created — "
+            f"{len(rules_df):,} rules"
         )
         self._save_figure(fig, "rules_scatter.html")
         return fig
 
-    def plot_network_graph(
+    # -------------------------------------------------------
+    # CHART 4 — Co-occurrence Heatmap
+    # Business question: Which items cluster together?
+    # Replaces network graph — more readable at scale
+    # -------------------------------------------------------
+
+    def plot_cooccurrence_heatmap(
         self,
         rules_df: pd.DataFrame,
-        min_confidence: float = 0.65,
-        title: str = "Association Rules Network",
+        top_n: int = 20,
+        title: str = "Item Co-occurrence — Confidence Heatmap",
     ) -> go.Figure:
         """
-        Network graph showing item associations.
-        Each node = item category
-        Each edge = association rule
-        Edge thickness = confidence strength
+        Heatmap of confidence between every item pair.
+        Row = antecedent (IF customer bought this)
+        Col = consequent (THEN they also bought this)
+        Color = confidence of that rule
 
-        This is the most visually impressive chart.
-        Shows which items cluster together naturally.
+        Business value:
+            Darker cells = strongest cross-sell opportunities
+            Cluster patterns reveal natural product groupings
+            Directly informs shelf placement and bundle pricing
 
         Args:
-            rules_df:       Output from Analyzer.run()
-            min_confidence: Only show rules above this threshold
-            title:          Chart title
+            rules_df: Output from Analyzer.run()
+            top_n:    Number of top items to include
+            title:    Chart title
 
         Returns:
             plotly Figure object
         """
-        logger.info("Plotting association rules network...")
+        logger.info("Plotting co-occurrence heatmap...")
 
         if len(rules_df) == 0:
             logger.warning("  No rules to plot")
             return go.Figure()
 
-        # Filter to strongest rules only
-        strong_rules = rules_df[
-            rules_df["confidence"] >= min_confidence
+        # Single-item rules only → clean readable heatmap
+        single_rules = rules_df[
+            (rules_df["antecedents"].apply(len) == 1) &
+            (rules_df["consequents"].apply(len) == 1)
         ].copy()
 
-        if len(strong_rules) == 0:
-            logger.warning(
-                f"  No rules above confidence {min_confidence}"
-            )
+        if len(single_rules) == 0:
+            logger.warning("  No single-item rules found")
             return go.Figure()
 
-        # Build network graph
-        G = nx.DiGraph()
+        single_rules["ant"] = single_rules["antecedents"].apply(
+            lambda x: str(list(x)[0])
+        )
+        single_rules["con"] = single_rules["consequents"].apply(
+            lambda x: str(list(x)[0])
+        )
 
-        for _, rule in strong_rules.iterrows():
-            for ant in rule["antecedents"]:
-                for con in rule["consequents"]:
-                    G.add_edge(
-                        ant, con,
-                        weight=rule["confidence"],
-                        lift=rule["lift"],
-                    )
+        # Top N items by appearance in rules
+        top_items = (
+            pd.concat([single_rules["ant"], single_rules["con"]])
+            .value_counts()
+            .head(top_n)
+            .index.tolist()
+        )
 
-        # Calculate layout
-        pos = nx.spring_layout(G, seed=42, k=2)
-
-        # Build edge traces
-        edge_traces = []
-        for edge in G.edges(data=True):
-            x0, y0 = pos[edge[0]]
-            x1, y1 = pos[edge[1]]
-            weight  = edge[2]["weight"]
-
-            edge_traces.append(go.Scatter(
-                x=[x0, x1, None],
-                y=[y0, y1, None],
-                mode="lines",
-                line=dict(
-                    width=weight * 3,
-                    color=self.colors["primary"],
-                ),
-                opacity=0.6,
-                hoverinfo="none",
-            ))
-
-        # Build node trace
-        node_x = [pos[node][0] for node in G.nodes()]
-        node_y = [pos[node][1] for node in G.nodes()]
-        node_text = list(G.nodes())
-        node_sizes = [
-            20 + G.degree(node) * 10
-            for node in G.nodes()
+        filtered = single_rules[
+            single_rules["ant"].isin(top_items) &
+            single_rules["con"].isin(top_items)
         ]
 
-        node_trace = go.Scatter(
-            x=node_x,
-            y=node_y,
-            mode="markers+text",
-            text=node_text,
-            textposition="top center",
-            hoverinfo="text",
-            marker=dict(
-                size=node_sizes,
-                color=self.colors["accent"],
-                line=dict(
-                    width=2,
-                    color=self.colors["primary"],
-                ),
+        pivot = (
+            filtered
+            .pivot_table(
+                index="ant",
+                columns="con",
+                values="confidence",
+                aggfunc="max",
+            )
+            .fillna(0)
+            .reindex(index=top_items, columns=top_items, fill_value=0)
+        )
+
+        fig = go.Figure(data=go.Heatmap(
+            z=pivot.values,
+            x=pivot.columns.tolist(),
+            y=pivot.index.tolist(),
+            colorscale=[
+                [0.0, "#f0f4f8"],
+                [0.3, "#90cdf4"],
+                [0.6, self.colors["primary"]],
+                [1.0, "#1a365d"],
+            ],
+            hoverongaps=False,
+            hovertemplate=(
+                "<b>IF: %{y}</b><br>"
+                "<b>THEN: %{x}</b><br>"
+                "Confidence: %{z:.3f}<br>"
+                "<extra></extra>"
+            ),
+            colorbar=dict(
+                title="Confidence",
+                thickness=15,
+                len=0.8,
+            ),
+        ))
+
+        fig.update_layout(
+            **self._base_layout(),
+            title=title,
+            xaxis=dict(
+                title="THEN buy this →",
+                tickangle=-45,
+                tickfont=dict(size=10),
+            ),
+            yaxis=dict(
+                title="← IF bought this",
+                tickfont=dict(size=10),
             ),
         )
 
-        # Combine traces
-        fig = go.Figure(
-            data=edge_traces + [node_trace],
-            layout=go.Layout(
-                title=title,
-                showlegend=False,
-                hovermode="closest",
-                xaxis=dict(showgrid=False, zeroline=False,
-                           showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False,
-                           showticklabels=False),
-                plot_bgcolor=self.colors["background"],
-                paper_bgcolor=self.colors["background"],
-                width=self.width,
-                height=self.height,
-            )
-        )
-
         logger.info(
-            f"  ✓ Network graph created "
-            f"({G.number_of_nodes()} nodes, "
-            f"{G.number_of_edges()} edges)"
+            f"  ✓ Co-occurrence heatmap created — "
+            f"{len(top_items)} × {len(top_items)} items"
         )
-        self._save_figure(fig, "network_graph.html")
+        self._save_figure(fig, "cooccurrence_heatmap.html")
         return fig
 
     # -------------------------------------------------------
@@ -458,10 +482,7 @@ class Visualizer:
     # -------------------------------------------------------
 
     def _base_layout(self) -> dict:
-        """
-        Returns base layout settings applied to all charts.
-        Ensures consistent styling across every figure.
-        """
+        """Consistent layout applied to all charts."""
         return {
             "width"        : self.width,
             "height"       : self.height,
@@ -473,19 +494,11 @@ class Visualizer:
                 color="#333333",
             ),
             "title_font"   : dict(size=18, color="#222222"),
-            "margin"       : dict(l=60, r=60, t=80, b=60),
+            "margin"       : dict(l=60, r=60, t=80, b=80),
         }
 
-    def _save_figure(
-        self, fig: go.Figure, filename: str
-    ) -> None:
-        """
-        Save figure to outputs/figures/ if save_figures=True.
-
-        Args:
-            fig:      Plotly figure to save
-            filename: Output filename (e.g. 'item_frequency.html')
-        """
+    def _save_figure(self, fig: go.Figure, filename: str) -> None:
+        """Save figure to outputs/figures/ if save_figures=True."""
         if self.save_figures:
             output_path = FIGURES_DIR / filename
             fig.write_html(str(output_path))
