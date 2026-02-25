@@ -62,18 +62,20 @@ ITEM_ID_MAX = 48
 # min_zhang=0.0     → A genuinely INCREASES probability of B
 
 APRIORI_MIN_SUPPORT    = 0.01
-APRIORI_MIN_CONFIDENCE = 0.60
-APRIORI_MIN_LIFT       = 1.0
-APRIORI_MIN_ZHANG      = 0.0
+#APRIORI_MIN_CONFIDENCE = 0.60
+#APRIORI_MIN_LIFT       = 1.0
+#APRIORI_MIN_ZHANG      = 0.0
 APRIORI_METRIC         = "lift"
 APRIORI_MIN_THRESHOLD  = 0.1
-
+APRIORI_MIN_CONFIDENCE = 0.2
+APRIORI_MIN_LIFT       = 1.0
+APRIORI_MIN_ZHANG      = 0.0
 # ===========================================================
 # RECOMMENDATION ENGINE
 # ===========================================================
 
 RECOMMENDER_TOP_N          = 5
-RECOMMENDER_MIN_CONFIDENCE = 0.6
+RECOMMENDER_MIN_CONFIDENCE = 0.2
 
 # ===========================================================
 # LOGGING
