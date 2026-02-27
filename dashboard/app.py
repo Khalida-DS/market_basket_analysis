@@ -12,15 +12,21 @@ try:
 
     loader = DataLoader()
     baskets_df, categories_df = loader.load_all()
-    st.write("Data loaded")
+    st.write("✅ Data loaded")
 
     preprocessor = Preprocessor(baskets_df, categories_df)
     one_hot_df = preprocessor.build_one_hot_matrix()
-    st.write(f"One-hot matrix: {one_hot_df.shape}")
+    st.write(f"✅ One-hot matrix: {one_hot_df.shape}")
 
-    analyzer = Analyzer(one_hot_df)
-    rules_df = analyzer.run()
-    st.write(f"Rules: {len(rules_df):,}")
+    st.write("⏳ Running Apriori — this takes ~8 seconds...")
+    
+    from mlxtend.frequent_patterns import apriori
+    frequent_itemsets = apriori(
+        one_hot_df, 
+        min_support=0.01, 
+        use_colnames=True
+    )
+    st.write(f"✅ Frequent itemsets: {len(frequent_itemsets):,}")
 
 except Exception as e:
     import traceback
