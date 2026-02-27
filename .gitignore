@@ -14,8 +14,8 @@ env/
 .ipynb_checkpoints/
 
 # Data files — never push raw data to GitHub
-data/raw/
-data/processed/
+#data/raw/
+#data/processed/
 
 # Secrets — NEVER push these
 .env
