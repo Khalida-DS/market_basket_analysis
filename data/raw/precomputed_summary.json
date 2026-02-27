@@ -1,0 +1,1 @@
+{"total_rules": 12670, "avg_confidence": 0.3037, "avg_lift": 1.361, "avg_zhang": 0.2493, "avg_support": 0.0174, "top_rule_antecedents": ["Skirt", "Sweatshirt"], "top_rule_consequents": ["Dressing Gown", "Stockings"], "top_rule_confidence": 0.2238, "top_rule_lift": 2.7597, "top_rule_zhang": 0.6946}

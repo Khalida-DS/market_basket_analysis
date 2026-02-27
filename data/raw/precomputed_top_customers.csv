@@ -1,0 +1,49 @@
+category_id,name,customer_id,purchase_count
+1,Ball Gown,3074494,4
+2,Belt,10655750,5
+3,Bikini,13049939,4
+4,Blazer,11337665,3
+5,Blouse,21097270,3
+6,Bra,22108352,4
+7,Camisole,18356249,3
+8,Cardigan,2799159,3
+9,Chemise,77456589,4
+10,Coat,59905095,4
+11,Corset,8657462,3
+12,Dress,31531294,3
+13,Dressing Gown,63742964,4
+14,Fleece,7099116,3
+15,Gloves,2619343,3
+16,Hair Accessory,19884881,3
+17,Hat,68613879,4
+18,Jacket,17942516,4
+19,Jeans,36277426,3
+20,Jewellery,68919292,4
+21,Kaftan,72077554,4
+22,Knickers,3792653,3
+23,Lingerie,10672810,5
+24,Nightgown,43174621,3
+25,Pashmina,37969963,4
+26,Polo Shirt,14124015,4
+27,Poncho,251936,3
+28,Pyjamas,38516514,4
+29,Robe,67891710,4
+30,Sandals,1231515,2
+31,Scarf,13892657,3
+32,Shawl,6460835,4
+33,Shorts,11735955,3
+34,Skirt,712584,4
+35,Slippers,18563724,3
+36,Socks,32082698,4
+37,Stockings,52079951,4
+38,Sunglasses,7801848,4
+39,Sweatshirt,7449199,4
+40,Swimwear,24383405,4
+41,Tankini,6676914,3
+42,Thong,29449527,4
+43,Tights,24734941,4
+44,Top,84029334,4
+45,Tracksuit,63365462,5
+46,Trainers,58749492,4
+47,Trousers,24383405,4
+48,,4196474,3
