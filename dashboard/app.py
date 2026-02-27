@@ -14,8 +14,12 @@ PAGES:
     2. Association Rules — rules scatter + co-occurrence heatmap
     3. Recommender      — live product recommendations
 """
-
 import streamlit as st
+import sys
+st.write("Python:", sys.version)
+st.write("Path:", sys.path)
+st.stop()
+#import streamlit as st
 import pandas as pd
 import sys
 from pathlib import Path
