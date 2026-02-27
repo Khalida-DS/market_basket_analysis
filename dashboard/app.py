@@ -22,12 +22,26 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.data_loader   import DataLoader
-from src.preprocessor  import Preprocessor
-from src.analyzer      import Analyzer
-from src.recommender   import Recommender
-from src.visualizer    import Visualizer
-from src.config        import RECOMMENDER_TOP_N
+#from src.data_loader   import DataLoader
+#from src.preprocessor  import Preprocessor
+#from src.analyzer      import Analyzer
+#from src.recommender   import Recommender
+#from src.visualizer    import Visualizer
+#from src.config        import RECOMMENDER_TOP_N
+
+
+try:
+    from src.data_loader   import DataLoader
+    from src.preprocessor  import Preprocessor
+    from src.analyzer      import Analyzer
+    from src.recommender   import Recommender
+    from src.visualizer    import Visualizer
+    from src.config        import RECOMMENDER_TOP_N
+except Exception as e:
+    import traceback
+    st.error(f"**Import error:** {e}")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # ===========================================================
 # PAGE CONFIGURATION
