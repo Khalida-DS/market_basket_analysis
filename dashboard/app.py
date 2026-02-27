@@ -18,19 +18,22 @@ import streamlit as st
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = str(Path(__file__).parent.parent)
 sys.path.insert(0, project_root)
 
-st.write("Project root:", project_root)
-st.write("Path[0]:", sys.path[0])
-
 try:
-    from src.config import RECOMMENDER_TOP_N
-    st.success(f"Import OK — RECOMMENDER_TOP_N={RECOMMENDER_TOP_N}")
+    from src.data_loader import DataLoader
+    st.write("DataLoader imported OK")
+    
+    loader = DataLoader()
+    st.write("DataLoader initialized OK")
+    
+    baskets_df, categories_df = loader.load_all()
+    st.write(f"Data loaded OK — {len(baskets_df):,} rows")
+
 except Exception as e:
     import traceback
-    st.error(f"Import failed: {e}")
+    st.error(f"Error: {e}")
     st.code(traceback.format_exc())
 
 st.stop()
